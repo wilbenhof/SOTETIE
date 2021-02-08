@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+        select {
+            width: 200px;
+            height: 30px;
+        }
+
+        th {
+            padding: 10px;
+            text-align: center;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-size: small;
+            border-radius: 5px;
+        }
+
+        tr {
+            background-color: rgb(0, 255, 179);
+        }
+
+        table {
+            background-color: rgb(127, 255, 249);
+            padding: 5px;
+        }
+    </style>
+
+    <title>Sotetie-hakutyökalu</title>
+</head>
+
+<body>
+
+    <h2>Hae kursseja</h2>
+
+    <table>
+
+        <tr>
+            <th name="aihe">Valitse aihe</th>
+            <th name="koulu">Valitse korkeakoulu</th>
+
+        </tr>
+
+        <tr>
+            <!-- koulutusalat tai aiheet -->
+            <th>
+                <select name="aihe">
+                    <option>Kaikki alat</option>
+                    <option>Tietotekniikka</option>
+                    <option>Rakennustekniikka</option>
+                </select>
+            </th>
+            <th>
+                <!-- listataan korkeakoulut, jotka haetaan jostain kannasta ehkä? -->
+                <select name="koulu">
+                    <option>Kaikki korkeakoulut</option>
+
+                </select>
+            </th>
+        </tr>
+
+        <tr>
+            <th colspan="2">
+                <button>HAE</button>
+            </th>
+        </tr>
+
+    </table>
+
+    <!-- tänne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
+
+
+</body>
+</html>
