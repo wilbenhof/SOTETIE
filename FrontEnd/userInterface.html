@@ -1,47 +1,64 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="interfaceStyles.css">
 
-    <style>
-        select {
-            width: 200px;
-            height: 30px;
-        }
-
-        th {
-            padding: 10px;
-            text-align: center;
-            font-family: Georgia, 'Times New Roman', Times, serif;
-            font-size: small;
-            border-radius: 5px;
-        }
-
-        tr {
-            background-color: rgb(0, 255, 179);
-        }
-
-        table {
-            background-color: rgb(127, 255, 249);
-            padding: 5px;
-        }
-    </style>
-
-    <title>Sotetie-hakuty�kalu</title>
+    <title>Sotetie-hakutyökalu</title>
 </head>
 
 <body>
 
     <h2>Hae kursseja</h2>
 
-    <table>
-
+    <table border="3">
         <tr>
-            <th name="aihe">Valitse aihe</th>
-            <th name="koulu">Valitse korkeakoulu</th>
+            <th>Valitse aihe</th>
+            <th>Valitse korkeakoulu</th>
 
+            <td rowspan="3" id="openSpecifiedSearch" class="specifiedSearch">
+                <p style="display: inline;">Tarkennettu haku</p>
+                <p style="display: inline;">X</p>
+
+                <p>
+                    Kieli
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Suomi</option>
+                        <option>Englanti</option>
+                    </select>
+                </p>
+                <p>
+                    Maksullisuus
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Kyllä</option>
+                        <option>Ei</option>
+                    </select>
+                </p>
+                <p>
+                    Opetusmuoto
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Lähiopetus</option>
+                        <option>Etäopetus</option>
+                    </select>
+                </p>
+                <p>
+                    Ajankohta
+                    <select>
+                        <option>Kaikki</option>
+                    </select>
+                </p>
+                <p>
+                    Kaupunki
+                    <select>
+                        <option>Kaikki</option>
+                    </select>
+                </p>
+            </td>
         </tr>
 
         <tr>
@@ -54,24 +71,38 @@
                 </select>
             </th>
             <th>
-                <!-- listataan korkeakoulut, jotka haetaan jostain kannasta ehk�? -->
+                <!-- listataan korkeakoulut, jotka haetaan jostain kannasta ehkä? -->
                 <select name="koulu">
                     <option>Kaikki korkeakoulut</option>
 
                 </select>
             </th>
         </tr>
-
         <tr>
             <th colspan="2">
-                <button>HAE</button>
+                <button class="searchButton" style="vertical-align: middle"><span>HAE</span></button><br />
+                <button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>
             </th>
         </tr>
-
     </table>
 
-    <!-- t�nne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
+    <script>
+        function specifiedSearchBtn() {
+            var x = document.getElementById("openSpecifiedSearch")
+            if (x.style.display == "none") {
+                x.style.display = "table-cell";
+            } else {
+                x.style.display = "none";
+            }
+        }
+
+
+
+    </script>
+
+    <!-- tänne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
 
 
 </body>
+
 </html>
