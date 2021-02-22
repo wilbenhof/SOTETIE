@@ -1,0 +1,84 @@
+@import url("site.css");
+
+select {
+    width: 200px;
+    height: 30px;
+}
+
+th {
+    padding: 10px;
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: small;
+    border-radius: 5px;
+}
+
+td {
+    padding: 10px;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: small;
+    border-radius: 5px;
+}
+
+tr {
+    background-color: rgba(45, 185, 143, 0.952);
+}
+
+table {
+    background-color: rgb(110, 206, 201);
+    padding: 5px;
+}
+
+/* Haku-napille tyylit ja animaatio*/
+.searchButton {
+    display: inline-block;
+    border-radius: 4px;
+    font-size: 20px;
+    padding: 8px;
+    width: 140px;
+    transition: all 0.5s;
+    cursor: pointer;
+    margin: 5px;
+}
+
+    .searchButton span {
+        cursor: pointer;
+        display: inline-block;
+        position: relative;
+        transition: 0.5s;
+    }
+
+        .searchButton span:after {
+            content: '\00bb';
+            position: absolute;
+            opacity: 0;
+            top: 0;
+            right: -20px;
+            transition: 0.5s;
+        }
+
+    .searchButton:hover span {
+        padding-right: 25px;
+    }
+
+        .searchButton:hover span:after {
+            opacity: 1;
+            right: 0;
+        }
+
+/* Tarkennut haku */
+.specifiedSearchBtn {
+    cursor: pointer;
+    text-align: right;
+    float: right;
+    margin-top: 10%;
+}
+
+button.specifiedSearchBtn:hover {
+    border-color: black;
+}
+
+.specifiedSearch {
+    text-align: left;
+    display: none;
+}
