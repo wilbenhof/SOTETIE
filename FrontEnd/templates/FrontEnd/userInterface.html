@@ -107,6 +107,7 @@
 <strong> data </strong>
 
     <script>
+        /* Tarkennettu haku nappi toiminnallisuus */
         function specifiedSearchBtn() {
             var x = document.getElementById("openSpecifiedSearch")
             if (x.style.display == "none") {
@@ -117,6 +118,14 @@
         }
 
 
+        /* Haetaan kurssi-data BackEndistä */
+        getData();
+        async function getData() {
+            const response = await fetch('/');
+            const data = await response.json();
+            console.log(data);
+        }
+        
 
     </script>
 
