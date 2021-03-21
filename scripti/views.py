@@ -6,11 +6,21 @@ import re
 import string
 import pymongo
 from django.shortcuts import render
+import numpy as np
+import pandas as pd
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn import svm
+from sklearn.metrics import recall_score, precision_score, f1_score
+
+from bson.json_util import dumps
+from io import StringIO
+
 
 
 def home(request):
-
-    
+  
     headers_id = {'Caller-id': '123'}; # opintopolun headers
     rows = str(10000); # tuotantovaiheen hakumääräsäädin
     search_list = [
@@ -45,6 +55,10 @@ def home(request):
     
     classes = createKnowledges(); #luodaan osaamisiin kuuluvat avainsanat
     
+    createTrainingDataset(headers_id,classes,knowledges,"NaiveBayesCourses"); #Oppimisainiston lista mongoon
+
+    classifiermodel, vectorizer = createClassifierModel(); #Luodaan oppimismalli
+    
     for search in search_list: #tehdään rajaavat kurssihaut tietokantaan
         response = requests.get(search,headers=headers_id);
         data = response.json();
@@ -55,12 +69,12 @@ def home(request):
         course_amount = course_amount + len(respond); # tarkastusarvo kaikille kursseille jos ne printataan konsolissa (printCourseAmount)
 
         for result in respond: #Tehdään jokaisen haun kurssille luokittelu
-            classify(result,classes,classifiedcourses,knowledges); # luokittelu
+            classify(result,classes,classifiedcourses,knowledges,classifiermodel,vectorizer); # luokittelu
     
     printCourseAmount(classifiedcourses,knowledges,course_amount); #tulostetaan kurssien luokat
     
-
-    sendtoMongo(classifiedcourses); #Luokiteltujen kurssien siirto tietokantaan
+    sendtoMongo(classifiedcourses,"kurssit");
+    #Luokiteltujen kurssien siirto tietokantaan
  
     return render(
         request,
@@ -72,7 +86,7 @@ def home(request):
     )
 
 
-def sendtoMongo(classifiedcourses):
+def sendtoMongo(classifiedcourses,database):
     
     # [0] - kurssin id - lista[string]
     # [1] - kurssinimi - string
@@ -87,7 +101,7 @@ def sendtoMongo(classifiedcourses):
 
     server = "mongodb+srv://rmuser:hakutyokalu123@cluster0.mtzby.mongodb.net/myFirstDatabase?retryWrites=true&w=majority" #Mongodb osoite
     server_client = "testaillaan"; #Mongodb projekti
-    server_db = "kurssit"; #Mongodb kurssihaun tietokanta
+    server_db = database; #Mongodb kurssihaun tietokanta
     backup_db = "backup"; # backup tietokanta
 
     client = pymongo.MongoClient(server); 
@@ -95,33 +109,53 @@ def sendtoMongo(classifiedcourses):
     
     kurssit = db[server_db];
     
-    
-    pipeline =  [ {"$match": {}}, # siirto päätietokannasta varatietokantaan ennen poistoa
-                 {"$out": backup_db},
+    if (database == "kurssit"): #Tehdään vain viikottaisessa kurssisiirrossa
+
+        pipeline =  [ {"$match": {}}, # siirto päätietokannasta varatietokantaan ennen poistoa
+                    {"$out": backup_db},
                 ]
 
-    db.kurssit.aggregate(pipeline) #siirto
+        db.kurssit.aggregate(pipeline) #siirto
     
-    kurssit.remove({}); #päätietokannan tyhjennys ennen kurssien ajoa
+        kurssit.remove({}); #päätietokannan tyhjennys ennen kurssien ajoa
 
-    for course in classifiedcourses: #kurssiajo tietokantaan, kaikki ei luokitellut kurssit jätetään pois
-        if (course[8][0] != "Muu"):
-           
-            kurssi = {  "kurssinimi": course[1],
-                        "kurssi-id": course[0],
-                        "kurssikuvaus": course[2],
-                        "kurssitavoiteet": course[3],
-                        "kurssintarjoajat": course[4],
-                        "kaupungit": course[5],
-                        "maksullisuus": course[6],
-                        "opintopisteet": course[7],
-                        "osaaminen": course[8],
-                        "opetuskielet": course[9]
-                 }
+        for course in classifiedcourses: #kurssiajo tietokantaan, kaikki ei luokitellut kurssit jätetään pois
+            if (course[8][0] != "Muu"):
+            
+                kurssi = {  "kurssinimi": course[1],
+                            "kurssiId": course[0],
+                            "kurssikuvaus": course[2],
+                            "kurssitavoiteet": course[3],
+                            "kurssintarjoajat": course[4],
+                            "kaupungit": course[5],
+                            "maksullisuus": course[6],
+                            "opintopisteet": course[7],
+                            "osaaminen": course[8],
+                            "opetuskielet": course[9]
+                        }
+                x = kurssit.insert_one(kurssi)
+            else:
+                continue;
+        return;
+
+    if (database == "NaiveBayesCourses"): #Kurssiajo tietokantaan jos kyseessä on oppimismallin aineiston luonti
+        kurssit.remove({});
+
+        for course in classifiedcourses:
+            kurssi = {
+                        "kurssiId": course[0],
+                        "osaaminen": course[1],
+                        "osaamisId": course[2],
+                        "kurssikuvaus": course[3],
+                        
+                    }
             x = kurssit.insert_one(kurssi)
-        else:
-            continue;
         
+
+
+#---------------------------------------------------------------
+# printCourseAmount on funktio jolla listataan eri kurssimäärät nopeasti ennen mongoon lähettämistä
+#---------------------------------------------------------------
 
 def printCourseAmount(classifiedcourses, knowledges,course_amount):
 
@@ -152,9 +186,13 @@ def printCourseAmount(classifiedcourses, knowledges,course_amount):
     print("Poistetut: "+ str(course_amount-classified_amount)); # tulostetaan poisjätettyjen määrä
 
 
+#------------------------------------------------------------------
+#createKnowledges on muuttuja, missä voi säätää haettavia osaamisia ja osaamisten sisältöä
+#------------------------------------------------------------------
+
 def createKnowledges():
-    asiakaslahtoisyys = ["asiakaslähtöi", "osallisuus", "kohtaaminen", "palvelutar", "asiakasprosessi"];
-    ohjausJaNeuvonta = ["ohjaus","neuvonta","palvelujärjestelmä","vuorovaikutus","kommunikaatio"];
+    asiakaslahtoisyys = ["asiakaslähtöi", "osallisuus", "kohtaaminen", "palvelutar", "asiakasprosessi","asiakasymmärrys"];
+    ohjausJaNeuvonta = ["ohjaus","neuvonta","palvelujärjestelmä","vuorovaikutus","kommunikaatio","traumat"];
     palvelujarjestelmat = ["palvelujärjestelmä","palveluohjaus","neuvonta","palveluverkosto","palvelutuottajat"];
     lainsaadantoJaEtiikka = ["etiikka","lainsäädäntö","tietosuoja","vastuu","eettinen"];
     tutkimusJaKehittamisosaaminen = ["tutkimus","innovaatio","kehittäminen"];
@@ -162,8 +200,9 @@ def createKnowledges():
     kustannusJaLaatutietoisuus = ["laatu","laadun","vaikuttavuu","vaikutusten","kustannukset"];
     kestavanKehityksenOsaaminen = ["kestävä","ekolog","kestävyys","kierrätys","ympäristö","energiakulutus"];
     viestintaOsaaminen = ["viestintä","tunnetila","empatia","selko"];
-    tyontekijyysOsaaminen = ["osaamisen","johtaminen","työhyvinvointi","muutososaaminen","muutosjoustavuus","urakehitys","verkostotyö","työyhteisö","moniammatillisuus"];
+    tyontekijyysOsaaminen = ["osaamisen","johtaminen","työhyvinvointi","muutososaaminen","muutosjoustavuus","urakehitys","verkostotyö","työyhteisö","moniammatillisuus","johtajuus"];
     monialainenYhteistoiminta = ["monialaisuu","moniammatillisuu","monitiet","yhteistyö","verkostoituminen","asiantuntijuus"];
+    muu = [];
 
     osaamisAlueet = [];
 
@@ -178,11 +217,16 @@ def createKnowledges():
     osaamisAlueet.append(viestintaOsaaminen);
     osaamisAlueet.append(tyontekijyysOsaaminen);
     osaamisAlueet.append(monialainenYhteistoiminta);
+    osaamisAlueet.append(muu);
 
     return osaamisAlueet;
 
 
-def classify(result,classes,classified,osaamiset):
+#------------------------------------------------------------------
+# classify muuttujassa suoritetaan kurssien osaamisten lajittelu
+#------------------------------------------------------------------
+
+def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
     
     
     # luodaan jaotellut kurssit:
@@ -300,7 +344,7 @@ def classify(result,classes,classified,osaamiset):
     if (result["subjects"] is not None): # Nullcheck
 
         for knowledgeclass in classes: #kaydaan lapi geneeriset osaamiset
-            c = 0; # parametri, jolla poistetaan osaamisluokan duplikaatit
+            c = 0; # parametri, jolla poistetaan osaamisluokan duplikaatit, ettei sama kurssi saa montaa kertaa samaa kategoriaa
 
             for knowledge in knowledgeclass: #kaydaan lapi rajaavat avainsanat
 
@@ -310,14 +354,35 @@ def classify(result,classes,classified,osaamiset):
                     
                     classified_course = True; # Jos kurssilla on osaaminen, true. Kurssi ei silloin voi olla "Muu"
                     c+=1;
+                    
 
-            i+=1; 
+                if knowledge in name and c == 0:
+                    classifiedknowledge.append(osaamiset[i]); # Lisätään osaaminen listaan jos avainsana löytyy osaamisesta
+                    
+                    classified_course = True; # Jos kurssilla on osaaminen, true. Kurssi ei silloin voi olla "Muu"
+                    c+=1;
+
+            i+=1; #osoitin listalle
 
 
-    if (classified_course == False):
-        classifiedknowledge.append(osaamiset[i]);
-        # jos ei löydy osaamista, sille annetaan listan viimeinen arvo "muu". Vaihtoehtoisesti tähän luokittelualgoritmi
-       
+    if (classified_course == False): # Jos kurssia ei ole kategorisoitu, se kategorisoidaan oppimisalgoritmillä
+        
+        if (course_languages[0] == "suomi"): #vain suomenkielisistä kursseista aineistoa malliin
+            course_info = name+" "+course_content+" "+course_goals; #luodaan String muuttuja nimestä, tavoitteista ja kurssisisällöstä
+            course_info_array = [course_info]; #sklearn tukee vain sanalistoja .predict
+        
+            vectorizer_matrix = vectorizer.transform(course_info_array);
+
+            knowledgescore = classifiermodel.predict(vectorizer_matrix); #Muunnetaan aineisto oppimisalgoritmille
+
+            if knowledgescore[0] == 999: #jos kurssia ei voitu kategorisoida annetuihin kategorioihin, se saa arvon 999, eli sille annetaan kategoria "muu"
+                knowledgescore[0] = len(osaamiset)-1;
+        
+            classifiedknowledge.append(osaamiset[knowledgescore[0]]); #lisätään kurssin kategoria
+            
+        else:
+            classifiedknowledge.append(osaamiset[len(osaamiset)-1]); #Koska algoritmi ei voi käsitellä englanninkielisiä kursseja aineiston vähyyden takia, englanninkielisiä
+            #kursseja ei voi kategorisoida => "muu"
 
     courseinfo.append(classifiedknowledge); # geneeriset osaamiset [8]
     courseinfo.append(course_languages); # lisätään lista kurssin kielistä [9]
@@ -326,5 +391,193 @@ def classify(result,classes,classified,osaamiset):
     classified.append(courseinfo); #Lisätään kurssin tiedot luokiteltujen kurssien listaan
     
 
-   
+#------------------------------------------------------------------
+# createTrainingDataset funktiossa luodaan aineisto mongodbseen oppimisalgoritmia varten
+# Käytetään avainsanolistoja, joita hyödyntämällä etsitään kaikista kursseista esimerkiksi etiikkaan liittyvät kurssit (avainsanat createKnowledges() muuttujassa)
+# kun hakusana löytyy joko kurssin avainsanasta tai otsikosta, se lisätään oppimisalgoritmille tietyllä osaamisella
+# lopulta kurssit lähetetään mongodbseen, mistä niitä hyödynnetään oppimisalgoritmin luonnissa
+#------------------------------------------------------------------
+
+def createTrainingDataset(headers,classes,knowledges,database):
+    
+    classifiedcourse = [];
+    listofIds = [];
+    
+
+    #luodaan mongoon valmis lista kaikista kursseista avainsanojen avulla
+    # [0] - id
+    # [1] - osaamisluokka
+    # [2] - osaamisluokan id
+    # [3] - kurssikuvaus
+    
+    
+    i = 0;
+
+    for knowledge in knowledges: #käydään läpi osaamiset
+        for knowledge_class in classes[i]: #Käydään läpi osaamisene liittyvät avainsanat, katso createKnowledges()
+
+            notclassifiedcourses = 10; # Määrä, kuinka monta "muu" kurssia otetaan listaan
+            search = "https://opintopolku.fi:443/lo/search?text="+knowledge_class+"&&&facetFilters=teachingLangCode_ffm%3AFI&&&lang=FI&ongoing=false&upcoming=false&upcomingLater=false&start=0&rows=1000&&order=asc&&&&&searchType=LO";
+            # Tällä hetkellä haetaan kaikista kursseista avainsanalla, esim. "etiikka"
+
+            response = requests.get(search,headers=headers);
+            data = response.json();
+            json_str = json.dumps(data);
+            resp = json.loads(json_str);
+            respond = resp['results']; #Hankitaan aineisto
+            
+            for course in respond: #Käydään läpi kurssi kerrallaan aineistoa
+
+                course_credit = course["credits"]; # otetaan kurssin opintopisteet tarkastusta varten
+
+                if (course_credit is None):
+                    continue;
+                    
+                course_credit = ''.join(filter(str.isdigit, course_credit)); #putsataan opintopiste int muuttujaksi
+    
+                if (course_credit != ''): #Tehdään tarkastus opintopisteille, jos opintopisteitä ei ole merkattu tai sen määrä ylittää 60 op, se hylätään. Näin tutkinnot saadaan poistettua
+                    course_credit = int(course_credit);
+                    if (course_credit > 60 or course_credit <= 0):
+                        continue;
+                else: #jos opintopiste muuttuja on tyhjä, hypätään yli
+                    continue;
+
+                if course["subjects"] is None: #Jos kurssilla ei ole avainsanoja, se hypätään yli
+                    continue;
+                
+                if (course["id"]) in listofIds: # Jos kurssi:id löytyy jo listasta, kurssia ei enään oteta mukaan, koska käytetty oppimisalgoritmi ei tällä aineistolla voi tehokkaasti
+                    #arvioida montaa eri osaamista kurssille
+                    continue;
+                
+                if knowledge_class in course["subjects"]: #Jos kurssin avainsanoista löytyy osaaminen, se lisätään
+                    
+                    course_info = [];
+                    course_info.append(course["id"]);
+                    listofIds.append(course["id"]);
+                    course_info.append(knowledge);
+                    course_info.append(i);
+
+                    classifiedcourse.append(course_info);
+                    continue;
+
+                if knowledge_class in course["name"]: # Jos kurssin nimestä löytyy osaaminen, se lisätään
+                    course_info = [];
+                    course_info.append(course["id"]);
+                    listofIds.append(course["id"]);
+                    course_info.append(knowledge);
+                    course_info.append(i);
+
+                    classifiedcourse.append(course_info);
+                    
+                else: # Kurssi lisätään "muu" kategoriaan tukemaan oppimisalgoritmia
+                    if (notclassifiedcourses > 0):
+                        course_info = [];
+                        course_info.append(course["id"]);
+                        listofIds.append(course["id"]);
+                        course_info.append("muu");
+                        course_info.append(999);
+
+                        classifiedcourse.append(course_info);
+                        notclassifiedcourses = notclassifiedcourses - 1;
+            
+        i = i+1;
+
+    for course in classifiedcourse: # Haetaan kursseihin niiden nimet, tavoitteet ja sisältö oppimisalgoritmille
+        
+        search = "https://opintopolku.fi:443/lo/koulutus/"+ course[0];
+        response = requests.get(search,headers=headers);
+        data = response.json();
+        json_str = json.dumps(data);
+        respond = json.loads(json_str);
+        
+        if (response.status_code == 404): #Jos kurssin id:tä ei löydy, kurssi hylätään, sillä kurssia ei tällöin löydy opintopolun omiltakaan sivuilta
+            
+            course.append(""); #eli kurssikuvaus on tyhjä
+            continue;
+
+        if (respond["content"] is None): #Tehdään kurssin sisällöstä tyhjä jos sitä ei ole
+            course_content = "";
+        else:
+            course_content = respond["content"];
+            course_content = cleanUpText(course_content); #putsataan content
+    
+        
+        if (respond["goals"] is None): # Tehdään kurssin sisällöstä tyhjä jos sitä ei ole
+            course_goals = "";
+
+        else:
+            course_goals = respond["goals"];
+            course_goals = cleanUpText(course_goals); #putsataan goals
+
+        course_name = respond["name"];
+        course_name = cleanUpText(course_name); #putsataan nimi
+
+        course.append(course_name+" "+course_content +" "+ course_goals); #lisätään mallille kurssia kuvavaat tekstit
+        
+        
+    classifiedcourse_clear = [];
+
+    for course in classifiedcourse:
+        if (course[3] != ""): # poistetaan kurssit joissa ei ole mitään tietoja saatavilla
+            classifiedcourse_clear.append(course);
+
+    print("Completed creating dataset");
+
+    sendtoMongo(classifiedcourse_clear,database);
+    print("Completed sending to mongo");
+
+#------------------------------------------------------------------
+# cleanUpText() putsaa annetut aineistot kaikesta ylimääräisestä
+#------------------------------------------------------------------
+
+def cleanUpText(text):
+    text = re.sub("<.*?>", " ", text); #Siistitään kurssisisällöstä html tagit pois
+    text = re.sub("\xa0", " ", text);
+    text = re.sub(r'[0-9]+', ' ', text); #Siistitään numerot pois
+
+    return text;
+
+#------------------------------------------------------------------
+# createClassifierModel() luo tukiverktorikone-mallin mukaisen koneoppimismallin ja antaa sen arvosanat
+#------------------------------------------------------------------
+def createClassifierModel():
+
+    dataset = fetchTrainingData();
+    json_data = dumps(dataset);
+    data = pd.read_json(StringIO(json_data));
+
+    vectorizer = CountVectorizer();
+
+    all_features = vectorizer.fit_transform(data.kurssikuvaus);
+
+    x_train, x_test, y_train, y_test = train_test_split(all_features, data.osaamisId, test_size=0.25,random_state=70)
+
+    classifier = svm.SVC(class_weight ='balanced',kernel='linear');
+
+    classifier.fit(x_train,y_train);
+    
+    print("Classifier score "+str(classifier.score(x_test,y_test)));
+    print("Recall: "+str(recall_score(y_test,classifier.predict(x_test),average='weighted')));
+    print("Precision: "+str(precision_score(y_test,classifier.predict(x_test),average='weighted')));
+    print("f1_score: "+str(f1_score(y_test,classifier.predict(x_test),average='weighted')));
+    
+    return classifier,vectorizer;
+
+#------------------------------------------------------------------
+# fetchTrainingData() tuo mongodbsta oppimisalgoritmissa hyödynnettävän aineiston kursseista
+#------------------------------------------------------------------
+def fetchTrainingData():
+    server = "mongodb+srv://rmuser:hakutyokalu123@cluster0.mtzby.mongodb.net/myFirstDatabase?retryWrites=true&w=majority" #Mongodb osoite
+    server_client = "testaillaan"; #Mongodb projekti
+    server_db = "NaiveBayesCourses"; #Mongodb kurssihaun tietokanta
+    
+
+    client = pymongo.MongoClient(server); 
+    db = client[server_client];
+    
+    kurssit = db[server_db];
+    
+    results = kurssit.find({});
+    return results;
+    
     
