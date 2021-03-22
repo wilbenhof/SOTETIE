@@ -6,30 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="interfaceStyles.css">
 
-<<<<<<< HEAD:FrontEnd/templates/FrontEnd/userInterface.html
 
     <title>Sotetie-hakutyokalu</title>
 
     {% load static %}
-<link rel="stylesheet" type="text/css" href="{% static 'FrontEnd/site.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'FrontEnd/site.css' %}" />
 
-=======
     <title>Sotetie-hakutyökalu</title>
->>>>>>> cb89ec2c941cc28f5d7b8af9389313052ec54b45:FrontEnd/userInterface.html
 </head>
 
 <body>
-
-    <h2>Hae kursseja</h2>
-
     <table border="3">
         <tr>
-            <th>Valitse aihe</th>
-            <th>Valitse korkeakoulu</th>
-
+            
+            <th colspan="2">
+                <div class="container">
+                    <div>
+                        <h4 class="title">Hae ammattikorkeakoulujen ja yliopistoiden kursseja</h4>
+                        <form>
+                            <div class="omrs-input-group">
+                                <label class="omrs-input-underlined">
+                                  <input required>
+                                  <span class="omrs-input-label">Kirjoita kurssin nimi tai hakusana...</span>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>            
+            </th>
+            
+            <!-- Tarkennettu haku; alla olevat vaihtoehdot-->
             <td rowspan="3" id="openSpecifiedSearch" class="specifiedSearch">
                 <p style="display: inline;">Tarkennettu haku</p>
-                <p style="display: inline;">X</p>
+                
+                <p>
+                    Aihe
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Tietotekniikka</option>
+                        <option>Sosiaali & terveys</option>
+                    </select>
+                </p>
+                <p>
+                    Korkeakoulu
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Savonia</option>
+                        <option>UEF</option>
+                    </select>
+                </p>
 
                 <p>
                     Kieli
@@ -71,39 +96,18 @@
         </tr>
 
         <tr>
-            <!-- koulutusalat tai aiheet -->
-            <th>
-                <select name="aihe">
-                    <option>Kaikki alat</option>
-                    <option>Tietotekniikka</option>
-                    <option>Rakennustekniikka</option>
-                </select>
-            </th>
-            <th>
-<<<<<<< HEAD:FrontEnd/templates/FrontEnd/userInterface.html
-                <!-- listataan korkeakoulut, jotka haetaan jostain kannasta ehk�? -->
-=======
-                <!-- listataan korkeakoulut, jotka haetaan jostain kannasta ehkä? -->
->>>>>>> cb89ec2c941cc28f5d7b8af9389313052ec54b45:FrontEnd/userInterface.html
-                <select name="koulu">
-                    <option>Kaikki korkeakoulut</option>
-
-                </select>
-            </th>
-        </tr>
-        <tr>
             <th colspan="2">
                 <button class="searchButton" style="vertical-align: middle"><span>HAE</span></button><br />
                 <button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>
             </th>
         </tr>
+
     </table>
+
 <strong> data </strong>
 
-<<<<<<< HEAD:FrontEnd/templates/FrontEnd/userInterface.html
-    <!-- t�nne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
-=======
     <script>
+        /* Tarkennettu haku nappi toiminnallisuus */
         function specifiedSearchBtn() {
             var x = document.getElementById("openSpecifiedSearch")
             if (x.style.display == "none") {
@@ -114,11 +118,18 @@
         }
 
 
+        /* Haetaan kurssi-data BackEndistä */
+        getData();
+        async function getData() {
+            const response = await fetch('/');
+            const data = await response.json();
+            console.log(data);
+        }
+        
 
     </script>
 
     <!-- tänne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
->>>>>>> cb89ec2c941cc28f5d7b8af9389313052ec54b45:FrontEnd/userInterface.html
 
 
 </body>
