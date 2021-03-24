@@ -2,16 +2,19 @@ const { response } = require("express");
 const express = require("express");
 const mongoose = require("mongoose");
 const dbModels = require("./dbModels/kurssi.js");
+const cors = require("cors");
 
 require("dotenv/config");
 
 const app = express();
 
+app.use(cors({origin:"http://127.0.0.1:5500"}))
+
 app.get("/", (req, res) => {
     res.send("First Request !!!")
 });
 
-app.get("/api", (req, res) => {
+app.get("/api/courses", (req, res) => {
     kurssi.translateAliases(kurssi.find(null, (err, obj) => {
         if (err) {
             res.status(500);
@@ -23,7 +26,6 @@ app.get("/api", (req, res) => {
         res.json(data);
     }));
 });
-
 
 mongoose.connect(process.env.DB_CONNECTION_STRING,
     { 
