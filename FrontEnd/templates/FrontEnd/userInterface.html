@@ -4,21 +4,22 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="interfaceStyles.css">
+
+    <link rel="stylesheet" type="text/css" href="interfaceStyles.css">    
+    <script type="text/javascript" src="scripts.js"></script>
 
 
     <title>Sotetie-hakutyokalu</title>
-
+    <!--
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'FrontEnd/site.css' %}" />
-
+    -->
     <title>Sotetie-hakutyökalu</title>
 </head>
 
 <body>
     <table border="3">
-        <tr>
-            
+        <tr>          
             <th colspan="2">
                 <div class="container">
                     <div>
@@ -97,39 +98,17 @@
 
         <tr>
             <th colspan="2">
-                <button class="searchButton" style="vertical-align: middle"><span>HAE</span></button><br />
+                <button class="searchButton" style="vertical-align: middle" onclick="getData(); renderData();"><span>HAE</span></button><br />
                 <button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>
             </th>
         </tr>
 
     </table>
 
-<strong> data </strong>
-
-    <script>
-        /* Tarkennettu haku nappi toiminnallisuus */
-        function specifiedSearchBtn() {
-            var x = document.getElementById("openSpecifiedSearch")
-            if (x.style.display == "none") {
-                x.style.display = "table-cell";
-            } else {
-                x.style.display = "none";
-            }
-        }
-
-
-        /* Haetaan kurssi-data BackEndistä */
-        getData();
-        async function getData() {
-            const response = await fetch('/');
-            const data = await response.json();
-            console.log(data);
-        }
-        
-
-    </script>
-
-    <!-- tänne sitten varmaan joku formi, johon haetut tiedot tulee tai ihan erillinen JavaScript tiedosto -->
+    <!-- Renderöidään haettuu kurssidata -->
+    <div id="joku">
+ 
+    </div>
 
 
 </body>
