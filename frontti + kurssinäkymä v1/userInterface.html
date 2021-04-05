@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" type="text/css" href="interfaceStyles.css">    
+    <script type="text/javascript" src="scripts.js"></script>
+
+
+    <title>Sotetie-hakutyokalu</title>
+    <!--
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'FrontEnd/site.css' %}" />
+    -->
+    <title>Sotetie-hakutyökalu</title>
+</head>
+
+<body>
+    <table border="3">
+        <tr>          
+            <th colspan="2">
+                <div class="container">
+                    <div>
+                        <h4 class="title">Hae ammattikorkeakoulujen ja yliopistoiden kursseja</h4>
+                        <form>
+                            <div class="omrs-input-group">
+                                <label class="omrs-input-underlined">
+                                  <input required>
+                                  <span class="omrs-input-label">Kirjoita kurssin nimi tai hakusana...</span>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>            
+            </th>
+            
+            <!-- Tarkennettu haku; alla olevat vaihtoehdot-->
+            <td rowspan="3" id="openSpecifiedSearch" class="specifiedSearch">
+                <p style="display: inline;">Tarkennettu haku</p>
+                
+                <p>
+                    Aihe
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Tietotekniikka</option>
+                        <option>Sosiaali & terveys</option>
+                    </select>
+                </p>
+                <p>
+                    Korkeakoulu
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Savonia</option>
+                        <option>UEF</option>
+                    </select>
+                </p>
+
+                <p>
+                    Kieli
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Suomi</option>
+                        <option>Englanti</option>
+                    </select>
+                </p>
+                <p>
+                    Maksullisuus
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Kyllä</option>
+                        <option>Ei</option>
+                    </select>
+                </p>
+                <p>
+                    Opetusmuoto
+                    <select>
+                        <option>Kaikki</option>
+                        <option>Lähiopetus</option>
+                        <option>Etäopetus</option>
+                    </select>
+                </p>
+                <p>
+                    Ajankohta
+                    <select>
+                        <option>Kaikki</option>
+                    </select>
+                </p>
+                <p>
+                    Kaupunki
+                    <select>
+                        <option>Kaikki</option>
+                    </select>
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <th colspan="2">
+                <button class="searchButton" style="vertical-align: middle" onclick="getData();"><span>HAE</span></button><br />
+                <button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>
+            </th>
+        </tr>
+
+    </table>
+
+    <!-- Renderöidään haettuu kurssidata -->
+    <div class="box">
+        <div id="datat"></div>
+    </div>        
+
+
+</body>
+
+</html>
