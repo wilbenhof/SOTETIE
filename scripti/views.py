@@ -17,10 +17,37 @@ from sklearn.metrics import recall_score, precision_score, f1_score
 from bson.json_util import dumps
 from io import StringIO
 
+from celery import Celery
+from celery.schedules import crontab
 
+# ajastusominaisuus, haetaan kurssitiedot joka maanantai klo 2.30
+app = Celery()
+app.conf.timezone = 'UTC+2'
+
+def ajastus(home):
+    sender.add_periodic_task(
+        crontab(minute=30, hour=2, day_of_week=1),
+        home()
+    )
 
 def home(request):
-  
+    print("Fetching classified courses");
+
+    classifiedcourses = getCourses();
+
+    print("Fetching done");
+    
+    return render(
+        request,
+        'FrontEnd/display.html',
+        {
+            'response':classifiedcourses
+
+        }
+    )
+
+
+def getCourses():
     headers_id = {'Caller-id': '123'}; # opintopolun headers
     rows = str(10000); # tuotantovaiheen hakumääräsäädin
     search_list = [
@@ -60,13 +87,17 @@ def home(request):
     classifiermodel, vectorizer = createClassifierModel(); #Luodaan oppimismalli
     
     for search in search_list: #tehdään rajaavat kurssihaut tietokantaan
-        response = requests.get(search,headers=headers_id);
-        data = response.json();
-        json_str = json.dumps(data);
-        resp = json.loads(json_str);
-        respond = resp['results']; # Muunnetaan data käsiteltävään muotoon
+        try:
+            response = requests.get(search,headers=headers_id);
+            data = response.json();
+            json_str = json.dumps(data);
+            resp = json.loads(json_str);
+            respond = resp['results']; # Muunnetaan data käsiteltävään muotoon
         
-        course_amount = course_amount + len(respond); # tarkastusarvo kaikille kursseille jos ne printataan konsolissa (printCourseAmount)
+            course_amount = course_amount + len(respond); # tarkastusarvo kaikille kursseille jos ne printataan konsolissa (printCourseAmount)
+        except:
+            print("Exception in search: "+search);
+            continue;
 
         for result in respond: #Tehdään jokaisen haun kurssille luokittelu
             classify(result,classes,classifiedcourses,knowledges,classifiermodel,vectorizer); # luokittelu
@@ -75,17 +106,9 @@ def home(request):
     
     sendtoMongo(classifiedcourses,"kurssit");
     #Luokiteltujen kurssien siirto tietokantaan
+    return classifiedcourses;
+    
  
-    return render(
-        request,
-        'FrontEnd/display.html',
-        {
-            'response':classifiedcourses
-
-        }
-    )
-
-
 def sendtoMongo(classifiedcourses,database):
     
     # [0] - kurssin id - lista[string]
@@ -369,7 +392,7 @@ def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
         
         if (course_languages[0] == "suomi"): #vain suomenkielisistä kursseista aineistoa malliin
             course_info = name+" "+course_content+" "+course_goals; #luodaan String muuttuja nimestä, tavoitteista ja kurssisisällöstä
-            course_info_array = [course_info]; #sklearn tukee vain sanalistoja .predict
+            course_info_array = [cleanUpText(course_info)]; #sklearn tukee vain sanalistoja .predict
         
             vectorizer_matrix = vectorizer.transform(course_info_array);
 
@@ -416,7 +439,7 @@ def createTrainingDataset(headers,classes,knowledges,database):
     for knowledge in knowledges: #käydään läpi osaamiset
         for knowledge_class in classes[i]: #Käydään läpi osaamisene liittyvät avainsanat, katso createKnowledges()
 
-            notclassifiedcourses = 10; # Määrä, kuinka monta "muu" kurssia otetaan listaan
+            notclassifiedcourses = 5; # Määrä, kuinka monta "muu" kurssia otetaan listaan
             search = "https://opintopolku.fi:443/lo/search?text="+knowledge_class+"&&&facetFilters=teachingLangCode_ffm%3AFI&&&lang=FI&ongoing=false&upcoming=false&upcomingLater=false&start=0&rows=1000&&order=asc&&&&&searchType=LO";
             # Tällä hetkellä haetaan kaikista kursseista avainsanalla, esim. "etiikka"
 
@@ -482,6 +505,8 @@ def createTrainingDataset(headers,classes,knowledges,database):
             
         i = i+1;
 
+    print("Training done fetching courseID:s");
+
     for course in classifiedcourse: # Haetaan kursseihin niiden nimet, tavoitteet ja sisältö oppimisalgoritmille
         
         search = "https://opintopolku.fi:443/lo/koulutus/"+ course[0];
@@ -521,7 +546,7 @@ def createTrainingDataset(headers,classes,knowledges,database):
         if (course[3] != ""): # poistetaan kurssit joissa ei ole mitään tietoja saatavilla
             classifiedcourse_clear.append(course);
 
-    print("Completed creating dataset");
+    print("Completed creating dataset, sending to mongo:");
 
     sendtoMongo(classifiedcourse_clear,database);
     print("Completed sending to mongo");
@@ -534,8 +559,19 @@ def cleanUpText(text):
     text = re.sub("<.*?>", " ", text); #Siistitään kurssisisällöstä html tagit pois
     text = re.sub("\xa0", " ", text);
     text = re.sub(r'[0-9]+', ' ', text); #Siistitään numerot pois
+    text = re.sub("[\W\d_]", " ", text); #Siistitään erikoismerkit
+    text = text.lower(); #muunnetaan sanat pienikirjaimiseksi
+    
+    with open('stopwords.json') as data_file: #poistetaan tekstistä stopwordit, katso stopwords.json
+        stopwords = json.load(data_file);
 
-    return text;
+        for word in stopwords['words']:
+            text = text.replace(" "+word+" ", ' '); #poistetaan stopwordit
+            
+    text = re.sub(' +', ' ', text) #Poistetaan ylimääräiset välilyönnit
+    
+
+    return text; #palautetaan standardoitu teksti oppimismallille
 
 #------------------------------------------------------------------
 # createClassifierModel() luo tukiverktorikone-mallin mukaisen koneoppimismallin ja antaa sen arvosanat
@@ -546,20 +582,19 @@ def createClassifierModel():
     json_data = dumps(dataset);
     data = pd.read_json(StringIO(json_data));
 
-    vectorizer = CountVectorizer();
+    vectorizer = CountVectorizer(); #luo teksteistä vektoreita ja laskee sanamäärät jne, alustus mallille
 
-    all_features = vectorizer.fit_transform(data.kurssikuvaus);
+    all_features = vectorizer.fit_transform(data.kurssikuvaus); #Lisätään aineisto CountVectorizeriin
 
-    x_train, x_test, y_train, y_test = train_test_split(all_features, data.osaamisId, test_size=0.25,random_state=70)
+    x_train, x_test, y_train, y_test = train_test_split(all_features, data.osaamisId, test_size=0.25,random_state=70) #Jaetaan käytettävä aineisto mallille
 
-    classifier = svm.SVC(class_weight ='balanced',kernel='linear');
+    classifier = svm.SVC(class_weight ='balanced',kernel='linear');  #Muokkaa jos löytyy fiksumpaa mallia scikitlearnista
 
-    classifier.fit(x_train,y_train);
+    classifier.fit(x_train,y_train); #Lisätään aineisto malliin
     
-    print("Classifier score "+str(classifier.score(x_test,y_test)));
-    print("Recall: "+str(recall_score(y_test,classifier.predict(x_test),average='weighted')));
-    print("Precision: "+str(precision_score(y_test,classifier.predict(x_test),average='weighted')));
-    print("f1_score: "+str(f1_score(y_test,classifier.predict(x_test),average='weighted')));
+    print("Classifier score "+str(classifier.score(x_test,y_test))); #Montako malli arvaa oikein prosentuaalisesti
+    print("Precision: "+str(precision_score(y_test,classifier.predict(x_test),average='weighted'))); # Precision
+    print("f1_score: "+str(f1_score(y_test,classifier.predict(x_test),average='weighted'))); #F1_score
     
     return classifier,vectorizer;
 
