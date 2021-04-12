@@ -17,18 +17,6 @@ from sklearn.metrics import recall_score, precision_score, f1_score
 from bson.json_util import dumps
 from io import StringIO
 
-from celery import Celery
-from celery.schedules import crontab
-
-# ajastusominaisuus, haetaan kurssitiedot joka maanantai klo 2.30
-app = Celery()
-app.conf.timezone = 'UTC+2'
-
-def ajastus(home):
-    sender.add_periodic_task(
-        crontab(minute=30, hour=2, day_of_week=1),
-        home()
-    )
 
 def home(request):
     print("Fetching classified courses");
