@@ -17,7 +17,6 @@ from sklearn.metrics import recall_score, precision_score, f1_score
 from bson.json_util import dumps
 from io import StringIO
 
-import time
 import schedule
 
 
@@ -37,7 +36,9 @@ def home(request):
         }
     )
 
-
+def testi():
+    print("lol");
+    
 def getCourses():
     headers_id = {'Caller-id': '123'}; # opintopolun headers
     rows = str(10000); # tuotantovaiheen hakumääräsäädin

@@ -17,25 +17,35 @@ from sklearn.metrics import recall_score, precision_score, f1_score
 from bson.json_util import dumps
 from io import StringIO
 
+import schedule
+
 
 def home(request):
-    print("Fetching classified courses");
-
-    classifiedcourses = getCourses();
-
-    print("Fetching done");
+    
+    runScript();
     
     return render(
         request,
-        'FrontEnd/display.html',
-        {
-            'response':classifiedcourses
-
-        }
+        'djangofront/display.html'
     )
 
 
-def getCourses():
+def runScript():
+    
+    headers_id,search_list,knowledges,classes = scriptSettings();
+
+    
+
+    schedule.every().monday.at("02:00").do(lambda: getCourses(headers_id,search_list,knowledges,classes))
+    schedule.every().sunday.at("00:00").do(lambda: createTrainingDataset(headers_id,classes,knowledges,"NaiveBayesCourses"));
+    #Ajaa funktion getCourses() joka maanantai yö 02:00
+    getCourses(headers_id,search_list,knowledges,classes);
+
+    while True:
+        schedule.run_pending()
+
+def scriptSettings():
+    
     headers_id = {'Caller-id': '123'}; # opintopolun headers
     rows = str(10000); # tuotantovaiheen hakumääräsäädin
     search_list = [
@@ -50,9 +60,6 @@ def getCourses():
     #[2] - suomenkielinen yliopistokoulutus terveysalalta
     #[3] - suomenkielinen yliopistokoulutus terveysalalta
 
-    course_amount = 0; #Kurssimäärä printCourseAmount() varten
-    classifiedcourses = []; #lista suodatetuille kursseille
-    
     knowledges = [
                 "Asiakaslähtöisyys",
                 "Ohjaus- ja neuvontaosaaminen",
@@ -69,8 +76,19 @@ def getCourses():
                 ];
     
     classes = createKnowledges(); #luodaan osaamisiin kuuluvat avainsanat
+
+    return headers_id,search_list,knowledges,classes
+
+def getCourses(headers_id,search_list,knowledges,classes):
+
+    print("Fetching classified courses");
+
     
-    createTrainingDataset(headers_id,classes,knowledges,"NaiveBayesCourses"); #Oppimisainiston lista mongoon
+
+    course_amount = 0; #Kurssimäärä printCourseAmount() varten
+    classifiedcourses = []; #lista suodatetuille kursseille
+    
+    
 
     classifiermodel, vectorizer = createClassifierModel(); #Luodaan oppimismalli
     
@@ -94,7 +112,10 @@ def getCourses():
     
     sendtoMongo(classifiedcourses,"kurssit");
     #Luokiteltujen kurssien siirto tietokantaan
-    return classifiedcourses;
+    
+    print("Fetching done");
+
+    
     
  
 def sendtoMongo(classifiedcourses,database):
