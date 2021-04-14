@@ -126,7 +126,17 @@ div.omrs-input-group {
             opacity: 1;
             right: 0;
         }
-
+/* Hakunappi pois käytöstä*/
+.searchButtonD {
+    display: inline-block;
+    border-radius: 4px;
+    font-size: 20px;
+    padding: 8px;
+    width: 140px;
+    transition: all 0.5s;
+    margin: 5px;
+    pointer-events: none;
+}
 /* Tarkennut haku */
 .specifiedSearchBtn {
     cursor: pointer;
