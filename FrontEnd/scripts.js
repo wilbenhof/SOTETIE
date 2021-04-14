@@ -50,7 +50,6 @@ function renderData(data) {
             else bg = "w";
         }
     }
-    //jos ei hakuehtoja(näytetään kaikki)
     console.log(rootElement);
 }
 //kurssin tietojen printtaus
