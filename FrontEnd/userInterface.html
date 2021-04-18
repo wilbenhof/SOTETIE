@@ -27,7 +27,7 @@
                         <form>
                             <div class="omrs-input-group">
                                 <label class="omrs-input-underlined">
-                                  <input required>
+                                  <input id="hakusana" required>
                                   <span class="omrs-input-label">Kirjoita kurssin nimi tai hakusana...</span>
                                 </label>
                             </div>
@@ -38,22 +38,33 @@
             
             <!-- Tarkennettu haku; alla olevat vaihtoehdot-->
             <td rowspan="3" id="openSpecifiedSearch" class="specifiedSearch">
-                <p style="display: inline;">Tarkennettu haku</p>
+                <p style="display: inline; text-decoration: underline; font-size: 120%;" >TARKENNA HAKUA</p>
                 
                 <p>
-                    Aihe
+                    Osaaminen
                     <select>
                         <option>Kaikki</option>
-                        <option>Tietotekniikka</option>
-                        <option>Sosiaali & terveys</option>
+                        <option>Asiakaslähtöisyys</option>
+                        <option>Ohjaus- ja neuvontaosaaminen</option>
+                        <option>Palvelujärjestelmät</option>
+                        <option>Lainsäädännön ja etiikan tuntemus</option>
+                        <option>Tutkimus- ja kehittämisosaaminen</option>
+                        <option>Robotiikka ja digitalisaatio</option>
+                        <option>Vaikuttavuus-, kustannus- ja laatutietoisuus</option>
+                        <option>Kestävän kehityksen osaaminen</option>
+                        <option>Viestintäosaaminen</option>
+                        <option>Työntekijyysosaaminen</option>
+                        <option>Monialainen yhteistoiminta</option>
+                        <option>Muu</option>
                     </select>
                 </p>
                 <p>
                     Korkeakoulu
                     <select>
                         <option>Kaikki</option>
-                        <option>Savonia</option>
-                        <option>UEF</option>
+                        <option>Ammattikorkeakoulu</option>
+                        <option>Yliopisto</option>
+                        <option>Muut</option>
                     </select>
                 </p>
 
@@ -74,32 +85,23 @@
                     </select>
                 </p>
                 <p>
-                    Opetusmuoto
-                    <select>
-                        <option>Kaikki</option>
-                        <option>Lähiopetus</option>
-                        <option>Etäopetus</option>
-                    </select>
-                </p>
-                <p>
-                    Ajankohta
-                    <select>
-                        <option>Kaikki</option>
-                    </select>
-                </p>
-                <p>
                     Kaupunki
                     <select>
                         <option>Kaikki</option>
                     </select>
                 </p>
             </td>
+
+            <td rowspan="2">
+                
+                <p><div class="box"><div id="datat"></div></div></p>
+            </td>
         </tr>
 
         <tr>
             <th colspan="2">
-                <button id="btnH" class="searchButton" style="vertical-align: middle" onclick="getData(), setTimeout(disButton, 3000)";"><span>HAE</span></button><br />
-                <button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>
+                <button id="btnH" class="searchButton" style="vertical-align: middle" onclick="getData(), setTimeout(disButton, 3000)";><span>HAE</span></button><br />
+                <!---<button class="specifiedSearchBtn" onclick="specifiedSearchBtn()">Tarkennettu haku</button>-->
             </th>
         </tr>
 

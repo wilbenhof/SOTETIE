@@ -57,6 +57,7 @@ function printCourse(data, i, rootElement, bg, str, jar){
     //div kurssin näyttämiseen
     var div = document.createElement("div");
     div.style.padding = "25px";
+    div.style.backgroundColor = "white"
     if(bg == "g") div.style.backgroundColor = "Gainsboro";
     //kurssin sisältö       
     div.innerHTML = 'Kurssin nimi: '+data[i].kurssinimi+"<br>"+'Kurssikuvaus: '+data[i].kurssikuvaus+
