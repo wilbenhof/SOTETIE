@@ -37,8 +37,9 @@ def runScript():
     
 
     schedule.every().monday.at("02:00").do(lambda: getCourses(headers_id,search_list,knowledges,classes))
-    schedule.every().sunday.at("00:00").do(lambda: createTrainingDataset(headers_id,classes,knowledges,"NaiveBayesCourses"));
+    schedule.every(21).days.at("00:00").do(lambda: createTrainingDataset(headers_id,classes,knowledges,"NaiveBayesCourses"));
     #Ajaa funktion getCourses() joka maanantai yö 02:00
+    #Päivittää koneoppimismallin joka 21 päivä kello 00:00
     getCourses(headers_id,search_list,knowledges,classes);
 
     while True:
@@ -130,6 +131,7 @@ def sendtoMongo(classifiedcourses,database):
     # [7] - opintopisteet - lista[int] 
     # [8] - geneerinen osaaminen - lista[string]
     # [9] - opetuskielet - lista[string]
+    # [10] - koulutustyyppi - string
 
     server = "mongodb+srv://rmuser:hakutyokalu123@cluster0.mtzby.mongodb.net/myFirstDatabase?retryWrites=true&w=majority" #Mongodb osoite
     server_client = "testaillaan"; #Mongodb projekti
@@ -163,7 +165,8 @@ def sendtoMongo(classifiedcourses,database):
                             "maksullisuus": course[6],
                             "opintopisteet": course[7],
                             "osaaminen": course[8],
-                            "opetuskielet": course[9]
+                            "opetuskielet": course[9],
+                            "koulustyyppi": course[10]
                         }
                 x = kurssit.insert_one(kurssi)
             else:
@@ -272,6 +275,7 @@ def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
     # [7] - opintopisteet - lista[int]
     # [8] - geneerinen osaaminen[] - lista[string]
     # [9] - kieli - lista[string]
+    # [10] - koulutustyyppi - string 
     
     course_credit = result["credits"]; # otetaan kurssin opintopisteet tarkastusta varten
     
@@ -321,6 +325,16 @@ def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
     course_charge = course["charge"]; #kurssin maksullisuus
     course_homeplace = course["provider"]["homeplace"]; #Kurssin kaupunki
     course_languages = course["teachingLanguages"]; #kurssin kielet listattuna
+    
+    course_educationtype = course["educationType"]; #Koulutustyypin tunniste
+
+    if (course_educationtype == "et01.05.03"): #Tunniste yliopistoille
+        course_educationtype = "Yliopisto";
+
+    if (course_educationtype == "et01.04.03"): #Tunniste AMK:lle
+        course_educationtype = "AMK";
+    
+
     name = result["name"]; # Kurssin nimi
     
     for classifiedcourse in classified: # Tarkasteetaan onko kurssinimi jo listassa, jos on niin lisätään nimen alle id, tarjoaja, paikkakunta, maksu ja opintopisteet
@@ -332,12 +346,14 @@ def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
         clearClassified = re.sub('[^A-Za-z0-9]+()', ' ', clearClassified);
 
         if (clearName == clearClassified): #verrataan putsattuja nimiä keskenään
-            classifiedcourse[0].append(result["id"]); #lisätään samannimisen nimen id listaan
-            classifiedcourse[4].append(result["lopNames"][0]); #lisätään tarjoaja listaan
-            classifiedcourse[5].append(course_homeplace); #lisätään paikkakunta listaan
-            classifiedcourse[6].append(course_charge); #lisätään kurssin maksu listaan
-            classifiedcourse[7].append(course_credit); #lisätään kurssin opintopisteet listaan
-            
+
+            if (result["id"] not in classifiedcourse[0]): #estetään duplikaatit
+                classifiedcourse[0].append(result["id"]); #lisätään samannimisen nimen id listaan
+                classifiedcourse[4].append(result["lopNames"][0]); #lisätään tarjoaja listaan
+                classifiedcourse[5].append(course_homeplace); #lisätään paikkakunta listaan
+                classifiedcourse[6].append(course_charge); #lisätään kurssin maksu listaan
+                classifiedcourse[7].append(course_credit); #lisätään kurssin opintopisteet listaan
+                classifiedcourse[10].append(course_educationtype); #lisätään kurssin koulutustyyppi
             return;
 
     # tarkastetaan jo laitetuista kursseista onko samannimisiä kursseja, jos on niin lisätään
@@ -416,9 +432,11 @@ def classify(result,classes,classified,osaamiset,classifiermodel,vectorizer):
             classifiedknowledge.append(osaamiset[len(osaamiset)-1]); #Koska algoritmi ei voi käsitellä englanninkielisiä kursseja aineiston vähyyden takia, englanninkielisiä
             #kursseja ei voi kategorisoida => "muu"
 
+    
     courseinfo.append(classifiedknowledge); # geneeriset osaamiset [8]
     courseinfo.append(course_languages); # lisätään lista kurssin kielistä [9]
-    
+    courseinfo.append([]);
+    courseinfo[10].append(course_educationtype); #Lisätään koulutyyppi[10]
 
     classified.append(courseinfo); #Lisätään kurssin tiedot luokiteltujen kurssien listaan
     
