@@ -8,7 +8,7 @@ Ohjelmistotuotanto 2 kurssilla toteutettu projekti. Sisältää hakutyökalun, j
     $ npm install express
 
 3. Kloonaa repo omalle koneellesi vaikka käyttämällä Git Bash:a komennolla
-    -> $ git clone https://github.com/wilbenhof/SOTETIE.git
+    - $ git clone https://github.com/wilbenhof/SOTETIE.git
     
 4. Avaa tiedosto koodieditorissasi, vaikka VSCode.
 
