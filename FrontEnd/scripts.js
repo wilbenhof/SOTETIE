@@ -107,7 +107,7 @@ function printCourse(i, rootElement, bg, str, jar){
             //järjestäjän lapsielementti
             var divi = document.createElement("div");
             //sisältö
-            divi.innerHTML= "<br>"+'Järjestäjä: '+data[i].kurssintarjoajat[j]+"tyypi:"+data[i].koulustyyppi[j]+"<br>"+'Kaupunki: '+data[i].kaupungit[j]+
+            divi.innerHTML= "<br>"+'Järjestäjä: '+data[i].kurssintarjoajat[j]+"<br>"+'Kaupunki: '+data[i].kaupungit[j]+
             "<br>"+'Maksullisuus: '+data[i].maksullisuus[j]+"<br>"+'Opintopisteet: '+data[i].opintopisteet[j]+"<br>"+
             str.link('https://opintopolku.fi/app/#!/koulutus/'+data[i].kurssiId[j]);
             //liitetään järjestäjä kurssiin
