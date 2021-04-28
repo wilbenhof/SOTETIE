@@ -99,7 +99,7 @@ function printCourse(i, rootElement, bg, str, jar){
     "<br>"+'Kurssitavoitteet: '+data[i].kurssitavoiteet+"<br>"+'Osaaminen: '+data[i].osaaminen+
     "<br>"+'Opetuskielet: '+data[i].opetuskielet+"<br>"+
     "<br>"+'Kurssin järjestäjät: '+"<br>";
-    //eri järjestäjät
+    //eri järjestäjät(jos on)
     for(j = 0; j < data[i].kaupungit.length; j++){
         //estetään toisto
         if(jar != data[i].kurssiId[j]){
